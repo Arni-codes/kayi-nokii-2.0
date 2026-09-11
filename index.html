@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KAI NOKKI - AI Jothishyan</title>
+  <meta name="description" content="AI-powered humorous Kerala-style palm-reading and jothishyan entertainment experience (&quot;Ninte kai onnu kaanikkeda...&quot;)">
+  <meta property="og:title" content="KAI NOKKI - AI Jothishyan">
+  <meta property="og:description" content="AI-powered humorous Kerala-style palm-reading and jothishyan entertainment experience (&quot;Ninte kai onnu kaanikkeda...&quot;)">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="app-container">
+    
+    <!-- Top Minimal Navigation -->
+    <header class="top-nav" id="main-header">
+      <div class="brand-wrapper" id="nav-brand" role="button" tabindex="0">
+        <div class="brand-symbol">KN</div>
+        <span class="brand-title">KAI NOKKI</span>
+        <span class="brand-badge">AI JOTHISHYAN</span>
+      </div>
+      <div class="nav-actions">
+        <span id="backend-status-pill" class="mock-badge live">AI BACKEND: ONLINE</span>
+        <button id="toggle-audio-btn" class="btn btn-secondary btn-sm" title="Toggle Audio Guidance">🔊 AUDIO: ON</button>
+        <button id="toggle-mock-btn" class="btn btn-secondary btn-sm" title="Toggle AI / Mock Mode">MOCK MODE: OFF</button>
+      </div>
+    </header>
+
+    <!-- 1. WELCOME SCREEN -->
+    <main id="welcome-screen" class="screen active">
+      <div class="welcome-box">
+        <div class="hero-symbol-circle">✋</div>
+        <h1 class="headline" id="welcome-title">KAI NOKKI</h1>
+        <p class="quote-tagline" id="welcome-tagline">"Ninte kai onnu kaanikkeda..."</p>
+        <p class="subheadline">
+          The unapologetically confident Malayalam AI palm reader. 
+          Present your palm, uncover your destiny, and prepare for unwarranted personal remarks.
+        </p>
+
+        <div class="welcome-actions">
+          <div class="button-group-row">
+            <button id="btn-scan-camera" class="btn btn-gold">
+              SCAN MY PALM
+            </button>
+            <button id="btn-connect-phone" class="btn btn-secondary">
+              USE PHONE CAMERA
+            </button>
+          </div>
+          <button id="btn-quick-simulation" class="btn btn-secondary btn-sm" style="margin-top: 8px;">
+            ⚡ TEST WITH SIMULATION (INSTANT)
+          </button>
+          <div class="subtle-line">Your future is probably already buffering.</div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 2. CAMERA CONNECTION SCREEN (Phone pairing) -->
+    <section id="connect-screen" class="screen">
+      <div class="connect-card">
+        <h2 class="headline" style="font-size: 26px; margin-bottom: 8px;">CONNECT PHONE CAMERA</h2>
+        <p class="subheadline" style="margin: 0 auto 16px;">
+          Use your phone as the high-resolution camera peer. The computer handles all hand tracking, audio, and AI synthesis.
+        </p>
+
+        <div class="connection-status-pill" id="connect-status-badge">
+          <span class="status-dot pulsing" id="connect-status-dot"></span>
+          <span id="connect-status-text">WAITING FOR PHONE...</span>
+        </div>
+
+        <div class="qr-box" id="qr-container">
+          <canvas id="qr-code-canvas" class="qr-code-canvas"></canvas>
+        </div>
+
+        <div class="pairing-url-box">
+          <span id="pairing-url-display">https://.../camera.html?room=...</span>
+          <button id="btn-copy-pairing-url" class="btn btn-secondary btn-sm" style="padding: 4px 10px;">COPY</button>
+        </div>
+
+        <div class="button-group-row">
+          <button id="btn-use-laptop-webcam" class="btn btn-secondary">
+            USE COMPUTER WEBCAM INSTEAD
+          </button>
+          <button id="btn-back-from-connect" class="btn btn-secondary">
+            CANCEL
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. SCANNER SCREEN -->
+    <section id="scanner-screen" class="screen">
+      <div class="scanner-header">
+        <div>
+          <h2 class="headline" style="font-size: 22px;">PALM SCANNER</h2>
+          <span class="subheadline" style="font-size: 13px;" id="scanner-feed-source">Live Video Stream</span>
+        </div>
+        <div class="connection-status-pill" id="scanner-state-pill">
+          <span class="status-dot" id="scanner-state-dot"></span>
+          <span id="scanner-state-text">ALIGNING PALM</span>
+        </div>
+      </div>
+
+      <div class="scanner-viewport-wrapper" id="scanner-viewport">
+        <video id="scanner-video" class="scanner-video" autoplay playsinline muted></video>
+        <canvas id="scanner-canvas" class="scanner-canvas"></canvas>
+
+        <!-- Palm Alignment Guide Box -->
+        <div id="palm-guide-overlay" class="scanner-guide-overlay">
+          <div class="scanner-corner corner-tl"></div>
+          <div class="scanner-corner corner-tr"></div>
+          <div class="scanner-corner corner-bl"></div>
+          <div class="scanner-corner corner-br"></div>
+        </div>
+      </div>
+
+      <div class="scanner-dashboard">
+        <div class="metric-card">
+          <div class="metric-label">PALM ALIGNMENT</div>
+          <div class="metric-value-row">
+            <span class="metric-number" id="alignment-val">0%</span>
+            <span id="alignment-status-desc" style="font-size: 13px; color: var(--text-muted);">Place palm in center</span>
+          </div>
+          <div class="metric-bar">
+            <div class="metric-bar-fill" id="alignment-bar-fill"></div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">STABILITY CONFIDENCE</div>
+          <div class="metric-value-row">
+            <span class="metric-number" id="stability-val">0%</span>
+            <span id="stability-status-desc" style="font-size: 13px; color: var(--text-muted);">Hold steady</span>
+          </div>
+          <div class="metric-bar">
+            <div class="metric-bar-fill" id="stability-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spoken guidance status bar -->
+      <div class="voice-status-bar" id="scanner-voice-bar">
+        <div class="voice-text">
+          <span id="jothishyan-guidance-quote">"Kai kaanikkeda mone..."</span>
+        </div>
+        <div class="speaking-indicator" id="scanner-audio-anim" style="display: none;">
+          <span class="speaking-bar"></span>
+          <span class="speaking-bar"></span>
+          <span class="speaking-bar"></span>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px; display: flex; gap: 12px;">
+        <button id="btn-manual-capture" class="btn btn-secondary btn-sm">
+          📸 FORCE CAPTURE NOW
+        </button>
+        <button id="btn-cancel-scan" class="btn btn-secondary btn-sm">
+          EXIT SCANNER
+        </button>
+      </div>
+    </section>
+
+    <!-- 4. ANALYSIS SCREEN -->
+    <section id="analysis-screen" class="screen">
+      <div class="analysis-container">
+        <div class="analysis-spinner"></div>
+        <h2 class="headline" style="font-size: 28px; margin-bottom: 8px;">ANALYZING PALM LINES</h2>
+        <p class="quote-tagline" id="analysis-quote">"Hmmm... Onnu nokkatte..."</p>
+        <div class="analysis-step-text" id="analysis-step-indicator">
+          Decoding life line curvature and overthinking coefficients...
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. RESULT SCREEN -->
+    <section id="result-screen" class="screen">
+      <div class="result-header">
+        <div>
+          <span class="category-badge">READING COMPLETE</span>
+          <h2 class="headline" style="font-size: 32px; margin-top: 4px;">THE JOTHISHYAN HAS SPOKEN</h2>
+        </div>
+        <button id="btn-play-jothishyan-voice" class="btn btn-gold btn-sm">
+          🔊 PLAY JOTHISHYAN VOICE
+        </button>
+      </div>
+
+      <!-- Jothishyan Speech Box -->
+      <div class="result-section-card">
+        <div class="result-voice-ctrl">
+          <span class="category-badge">JOTHISHYAN SAYS</span>
+          <div class="audio-waveform-display" id="result-waveform" style="display: none;">
+            <span class="speaking-bar"></span>
+            <span class="speaking-bar"></span>
+            <span class="speaking-bar"></span>
+            <span class="speaking-bar"></span>
+          </div>
+        </div>
+        <p class="jothishyan-speech-bubble" id="result-speech-text">
+          Loading reading...
+        </p>
+      </div>
+
+      <!-- Categorized Readings -->
+      <div class="categories-grid">
+        <div class="category-card" id="card-love">
+          <span class="category-badge">LOVE & ROMANCE</span>
+          <p class="category-content" id="cat-text-love">-</p>
+        </div>
+        <div class="category-card" id="card-career">
+          <span class="category-badge">CAREER & AMBITION</span>
+          <p class="category-content" id="cat-text-career">-</p>
+        </div>
+        <div class="category-card" id="card-money">
+          <span class="category-badge">MONEY & EXPENSES</span>
+          <p class="category-content" id="cat-text-money">-</p>
+        </div>
+        <div class="category-card" id="card-personality">
+          <span class="category-badge">PERSONALITY</span>
+          <p class="category-content" id="cat-text-personality">-</p>
+        </div>
+        <div class="category-card" id="card-future">
+          <span class="category-badge">FUTURE HORIZONS</span>
+          <p class="category-content" id="cat-text-future">-</p>
+        </div>
+      </div>
+
+      <div class="result-bottom-actions">
+        <button id="btn-ask-jothishyan" class="btn btn-gold">
+          ASK THE JOTHISHYAN (CHAT)
+        </button>
+        <button id="btn-scan-again" class="btn btn-secondary">
+          SCAN AGAIN
+        </button>
+      </div>
+    </section>
+
+    <!-- 6. CHAT SCREEN -->
+    <section id="chat-screen" class="screen">
+      <div class="chat-header">
+        <div>
+          <span class="category-badge">SESSION ACTIVE</span>
+          <h2 class="headline" style="font-size: 26px; margin-top: 4px;">ASK THE JOTHISHYAN</h2>
+        </div>
+        <button id="btn-chat-back-reading" class="btn btn-secondary btn-sm">
+          VIEW READING
+        </button>
+      </div>
+
+      <!-- Quick sample prompts -->
+      <div class="quick-prompts-row" id="quick-prompts-container">
+        <button class="prompt-chip" data-prompt="Ente love life engane aanu?">Ente love life engane aanu?</button>
+        <button class="prompt-chip" data-prompt="Job kittumo?">Job kittumo?</button>
+        <button class="prompt-chip" data-prompt="Foreign pokan chance undo?">Foreign pokan chance undo?</button>
+        <button class="prompt-chip" data-prompt="Why am I always overthinking?">Why am I always overthinking?</button>
+        <button class="prompt-chip" data-prompt="Enikku cash eppo varum?">Enikku cash eppo varum?</button>
+      </div>
+
+      <div class="chat-messages-container" id="chat-messages-feed">
+        <!-- Messages dynamically rendered here -->
+      </div>
+
+      <form id="chat-form" class="chat-input-bar">
+        <input 
+          type="text" 
+          id="chat-input" 
+          class="chat-input-field" 
+          placeholder="Chodikkeda mone... (Ask something)"
+          autocomplete="off"
+        >
+        <button type="submit" class="btn btn-gold" id="btn-chat-send">
+          SEND
+        </button>
+      </form>
+    </section>
+
+    <!-- Footer Disclaimer -->
+    <footer class="global-disclaimer">
+      KAI NOKKI is an AI-generated entertainment experience. Palm readings are fictional and should not be treated as scientific predictions or professional advice.
+    </footer>
+  </div>
+
+  <!-- Vanilla JavaScript Modules (No Bundlers / Frameworks) -->
+  <script src="/js/audio.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/webrtc.js"></script>
+  <script src="/js/handDetection.js"></script>
+  <script src="/js/scanner.js"></script>
+  <script src="/js/result.js"></script>
+  <script src="/js/chat.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

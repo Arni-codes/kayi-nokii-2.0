@@ -1,0 +1,6 @@
+{
+  "name": "KAI NOKKI",
+  "description": "AI-powered humorous Kerala-style palm-reading and jothishyan entertainment experience (\"Ninte kai onnu kaanikkeda...\")",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

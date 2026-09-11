@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>KAI NOKKI - Phone Camera</title>
+  <meta name="description" content="KAI NOKKI Mobile Camera Peer">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="phone-camera-body">
+  <div class="phone-view-container">
+    <video id="phone-camera-video" class="phone-video-stream" autoplay playsinline muted></video>
+
+    <div class="phone-overlay">
+      <div class="phone-header">
+        <div class="brand-symbol" style="background: rgba(0,0,0,0.6);">KN</div>
+        <div class="phone-status-badge" id="phone-status-badge">
+          INITIALIZING CAMERA...
+        </div>
+      </div>
+
+      <div class="phone-footer">
+        <h3>STREAMING TO COMPUTER</h3>
+        <p>Keep your palm in view. The computer will analyze the palm and speak the reading.</p>
+        <p style="font-size: 11px; margin-top: 8px; color: var(--accent-gold); font-family: var(--font-mono);">
+          KEEP THIS PAGE OPEN
+        </p>
+        <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
+          <button id="btn-switch-camera" class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 6px 12px;">
+            SWITCH CAMERA
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/webrtc.js"></script>
+  <script src="/js/camera.js"></script>
+</body>
+</html>
