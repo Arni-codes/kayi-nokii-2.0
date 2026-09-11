@@ -80,7 +80,7 @@ class ChatController {
         message: text,
         palm_context: palmContext,
         chat_history: this.chatHistory,
-        voice: "Fenrir"
+        voice: window.app.activeVoice
       });
 
       this.removeTypingIndicator(typingIndicatorId);
@@ -90,13 +90,13 @@ class ChatController {
         role: "jothishyan",
         text: replyText,
         audio_url: res.audio_url,
-        voice: "Fenrir"
+        voice: window.app.activeVoice
       });
 
       this.chatHistory.push({ role: "jothishyan", text: replyText });
 
-      // Automatically play response Malayalam AI voice (Fenrir Deep Astrologer)
-      window.audioController.playResultAudio(res.audio_url, replyText, "Fenrir");
+      // Automatically play response Malayalam AI voice
+      window.audioController.playResultAudio(res.audio_url, replyText, window.app.activeVoice);
     } catch (err) {
       this.removeTypingIndicator(typingIndicatorId);
       this.appendMessage({
@@ -114,7 +114,7 @@ class ChatController {
     const msgEl = document.createElement("div");
     msgEl.className = `chat-message ${msg.role}`;
 
-    const senderName = msg.role === "user" ? "YOU" : "FENRIR KAI NOKKI";
+    const senderName = msg.role === "user" ? "YOU" : "KAI NOKKI AI";
 
     msgEl.innerHTML = `
       <span class="message-sender">${senderName}</span>
@@ -127,13 +127,14 @@ class ChatController {
       audioBtn.className = "btn btn-secondary btn-sm message-audio-btn";
       audioBtn.style.fontSize = "11px";
       audioBtn.style.padding = "4px 8px";
-      audioBtn.innerHTML = "▶ 🔊 PLAY MALE VOICE";
+      const btnText = window.app && window.app.activeVoice === "female-astrologer" ? "▶ 🔊 PLAY FEMALE VOICE" : "▶ 🔊 PLAY MALE VOICE";
+      audioBtn.innerHTML = btnText;
       audioBtn.onclick = () => {
         window.audioController.unlockAudio();
         if ('speechSynthesis' in window) {
           window.speechSynthesis.resume();
         }
-        window.audioController.playResultAudio(msg.audio_url, msg.text, "Fenrir");
+        window.audioController.playResultAudio(msg.audio_url, msg.text, msg.voice || window.app.activeVoice);
       };
       msgEl.appendChild(audioBtn);
     }

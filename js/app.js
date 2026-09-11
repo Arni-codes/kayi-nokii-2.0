@@ -10,6 +10,7 @@ class App {
     this.currentRoomId = `kn-${Math.floor(1000 + Math.random() * 9000)}`;
     this.currentPalmData = null;
     this.webrtc = null;
+    this.activeVoice = "male-astrologer";
 
     this.scannerController = null;
     this.resultController = null;
@@ -29,6 +30,29 @@ class App {
   }
 
   bindNavigationEvents() {
+    // Voice Toggle button
+    const voiceToggleBtn = document.getElementById("toggle-voice-btn");
+    const voicePill = document.getElementById("ai-voice-pill");
+    if (voiceToggleBtn) {
+      voiceToggleBtn.addEventListener("click", () => {
+        if (this.activeVoice === "male-astrologer") {
+          this.activeVoice = "female-astrologer";
+          voiceToggleBtn.textContent = "VOICE: FEMALE";
+          if (voicePill) {
+            voicePill.innerHTML = "🎙️ FEMALE MALAYALAM VOICE";
+            voicePill.title = "Authentic Female Kerala Astrologer Voice (F5-TTS v2)";
+          }
+        } else {
+          this.activeVoice = "male-astrologer";
+          voiceToggleBtn.textContent = "VOICE: MALE";
+          if (voicePill) {
+            voicePill.innerHTML = "🎙️ MALE MALAYALAM VOICE";
+            voicePill.title = "Deep Male Malayalam Astrologer Voice (Midhun Neural / Fenrir)";
+          }
+        }
+      });
+    }
+
     // Brand header click returns to welcome
     const brandNav = document.getElementById("nav-brand");
     if (brandNav) {
@@ -289,21 +313,20 @@ class App {
     if (stepIndicator) {
       stepIndicator.textContent = "Mapping palm mounts and life line curvature...";
       setTimeout(() => {
-        if (stepIndicator) stepIndicator.textContent = "Synthesizing Unnimaya Jothishyan persona response...";
+        if (stepIndicator) stepIndicator.textContent = "Synthesizing Astrologer persona response...";
       }, 900);
     }
 
     try {
       let response;
-      const activeVoice = "Fenrir";
       if (this.mockMode) {
         response = window.apiClient.generateMockAnalysis(capturedData);
-        response.voice = "Fenrir";
+        response.voice = this.activeVoice;
       } else {
         response = await window.apiClient.analyzePalm({
           image: capturedData.image,
           features: capturedData.features,
-          voice: "Fenrir"
+          voice: this.activeVoice
         });
       }
 

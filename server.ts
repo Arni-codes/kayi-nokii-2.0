@@ -107,37 +107,43 @@ async function generateGeminiContentWithRetry(
   return null;
 }
 
-// Helper to construct punchy, fast Unnimaya Kai Nokki prompt
-function buildPromptText(palmData: any, userMessage: string = "", chatHistory: any[] = []): string {
+// Helper to construct punchy, fast Kai Nokki prompt
+function buildPromptText(palmData: any, userMessage: string = "", chatHistory: any[] = [], voice: string = "male-astrologer"): string {
   let historyStr = "";
   if (chatHistory && chatHistory.length > 0) {
     historyStr = "\nRecent dialogue:\n";
     for (const msg of chatHistory.slice(-4)) {
-      const role = msg.role === "user" ? "User" : "Unnimaya";
+      const role = msg.role === "user" ? "User" : "Kai Nokki";
       historyStr += `${role}: ${msg.text}\n`;
     }
   }
 
-  return `You are "Unnimaya Kai Nokki" (ഉണ്ണിമായ കൈ നോക്കി), the hilarious, confident, sharp-tongued Kerala astrologer and palm reader.
+  const personaName = voice === "female-astrologer" ? "Unnimaya (ഉണ്ണിമായ)" : "Fenrir (ഫെൻറിർ)";
+  
+  return `You are "${personaName} Kai Nokki", the hilarious, confident, sharp-tongued Kerala astrologer and palm reader.
 Style rules:
 - Speak in authentic, expressive colloquial Malayalam script.
 - Be funny, witty, sarcastic, and dramatic with iconic Kerala humor.
-- Naturally use playful nicknames and expressions (e.g., എടാ ഉണ്ടം പാണ്ടി, മൊട്ടത്തലയാ, പുളകിതൻ പാവയ്ക്കേ, മയോണീസ് മോനേ, ചെന്താമര മലരേ, കുണ്ടാമണ്ടി തലയാ, കശുവണ്ടി പോലെ, തീർന്നടാ).
+- CRITICAL INSTRUCTION: DO NOT repeat the same catchphrases over and over. Randomly pull from a MASSIVE variety of slang to keep it fresh.
+- Example words to sprinkle RANDOMLY (pick only 1 or 2, never all): എടാ കുട്ടിത്തേവാങ്കേ, കോന്തൻ, മണവാളൻ, വട്ടുണ്ടോ നിനക്ക്, ഉഡായിപ്പ്, ഊള, തരികിട, അലവലാതി, ഗുണ്ടം പീപ്പി, മൊട്ടത്തലയാ, പുളകിതൻ പാവയ്ക്കേ, മയോണീസ് മോനേ, ചെന്താമര മലരേ, കശുവണ്ടി പോലെ, കുണ്ടാമണ്ടി, എടാ കൊടുകമ്പിളി, വങ്കൻ, പത്താംക്ലാസ്സ് ബുദ്ധി, മാക്രി, വളിപ്പ്, കുട്ടിചാത്തൻ, കിളിപോയി, എടാ മരവാഴേ, ഓന്ത് ഗോപാലൻ.
+- VARY your tone. Sometimes be deeply mystical, sometimes be brutally insulting, sometimes surprisingly encouraging.
 - Keep it punchy: 2 to 4 sentences max.
 ${palmData ? `Palm features: ${JSON.stringify(palmData)}` : ""}
 ${historyStr}
-User query / prompt: ${userMessage || "Give a complete, funny initial Malayalam palm reading roast based on this palm."}
+User query / prompt: ${userMessage || "Give a complete, funny initial Malayalam palm reading roast based on this palm. Use a completely new random slang word from the list."}
 
 Output ONLY your spoken Malayalam response.`;
 }
 
 // Fallback witty mock answers
 const MOCK_SUMMARIES = [
-  "എടാ ഉണ്ടം പാണ്ടി... കൈ ഞാൻ കൃത്യമായി നോക്കി! ഇവിടെ നോക്കിയേ... നിന്റെ ലൈഫ് ലൈൻ നല്ല ലെങ്ത് ഉണ്ട്. പക്ഷേ പുളകിതൻ പാവയ്ക്കേ, രാത്രി ഉറങ്ങാതെ ഫോണിൽ നോക്കി ഇരിക്കുന്ന ആ സ്വഭാവം മാറിയില്ലെങ്കിൽ കൺതടത്തിൽ തിമിര തങ്കന്റെ കറുപ്പ് വരും! അതൊക്കെ പോട്ടെ മുത്തേ... ലവ് ലൈൻ ആണ് കിടുക്കൻ. അടുത്ത മാസം ഒരു വലിയ എക്സ്ചേഞ്ച് ഓഫർ വരാൻ സാധ്യതയുണ്ട്. തീർന്നടാ!",
-  "മൊട്ടത്തലയാ... നീ ഇങ്ങോട്ട് വാ. കൈ കണ്ടിട്ട് എനിക്ക് ഒരു കാര്യം മനസ്സിലായി. ബിസിനസ് പ്ലാൻ ഒക്കെ മനസ്സിൽ ഭയങ്കരമായി ഓടുന്നുണ്ട്. പക്ഷേ മൺചട്ടി മലരേ... പൈസ കിട്ടിയാൽ കയ്യിൽ നിൽക്കില്ല, കശുവണ്ടി പോലെ കൊറിച്ചു തീർക്കും! ഓന്ത് ഗോപാലനെ പോലെ അങ്ങോട്ടും ഇങ്ങോട്ടും ചാടാതെ ഒരു കാര്യത്തിൽ ഉറച്ചു നിക്ക്!",
-  "എടി ചെന്താമര മലരേ... നിന്റെ ഹാർട്ട് ലൈൻ കണ്ടിട്ട് എനിക്ക് ചിരി വരുന്നു! കോളേജിൽ ആരുടെയോ പിറകെ നടന്നിട്ട് അവസാനം ഇൻസ്റ്റാഗ്രാമിൽ മാത്രം ഒളിഞ്ഞു നോക്കുന്ന ആ പഴയ സ്വഭാവം ഇപ്പൊഴും ഉണ്ടോ? പേടിക്കണ്ട... നിന്റെ തലവരയിൽ നല്ലൊരു വഴിത്തിരിവ് കിടപ്പുണ്ട്. ഒരു പ്രീമിയം സർപ്രൈസ് വരും!",
+  "എടാ കുട്ടിത്തേവാങ്കേ... കൈ ഞാൻ കൃത്യമായി നോക്കി! ഇവിടെ നോക്കിയേ... നിന്റെ ലൈഫ് ലൈൻ നല്ല ലെങ്ത് ഉണ്ട്. പക്ഷേ പുളകിതൻ പാവയ്ക്കേ, രാത്രി ഉറങ്ങാതെ ഫോണിൽ നോക്കി ഇരിക്കുന്ന ആ സ്വഭാവം മാറിയില്ലെങ്കിൽ കൺതടത്തിൽ തിമിര തങ്കന്റെ കറുപ്പ് വരും! അതൊക്കെ പോട്ടെ മുത്തേ... ലവ് ലൈൻ ആണ് കിടുക്കൻ. അടുത്ത മാസം ഒരു വലിയ എക്സ്ചേഞ്ച് ഓഫർ വരാൻ സാധ്യതയുണ്ട്. തീർന്നടാ!",
+  "എടാ മരവാഴേ... നീ ഇങ്ങോട്ട് വാ. കൈ കണ്ടിട്ട് എനിക്ക് ഒരു കാര്യം മനസ്സിലായി. ബിസിനസ് പ്ലാൻ ഒക്കെ മനസ്സിൽ ഭയങ്കരമായി ഓടുന്നുണ്ട്. പക്ഷേ പൈസ കിട്ടിയാൽ കയ്യിൽ നിൽക്കില്ല, കശുവണ്ടി പോലെ കൊറിച്ചു തീർക്കും! ഓന്ത് ഗോപാലനെ പോലെ അങ്ങോട്ടും ഇങ്ങോട്ടും ചാടാതെ ഒരു കാര്യത്തിൽ ഉറച്ചു നിക്ക്!",
+  "എടാ അലവലാതി... നിന്റെ ഹാർട്ട് ലൈൻ കണ്ടിട്ട് എനിക്ക് ചിരി വരുന്നു! കോളേജിൽ ആരുടെയോ പിറകെ നടന്നിട്ട് അവസാനം ഇൻസ്റ്റാഗ്രാമിൽ മാത്രം ഒളിഞ്ഞു നോക്കുന്ന ആ പഴയ സ്വഭാവം ഇപ്പൊഴും ഉണ്ടോ? പേടിക്കണ്ട... നിന്റെ തലവരയിൽ നല്ലൊരു വഴിത്തിരിവ് കിടപ്പുണ്ട്. ഒരു പ്രീമിയം സർപ്രൈസ് വരും!",
   "എടാ കുണ്ടാമണ്ടി തലയാ... കരിയർ ലൈൻ കണ്ടിട്ട് ഗൂഗിൾ മാപ്സ് പോലും വഴി തെറ്റും! ഓവർതിങ്കിംഗ് നിന്റെ ബ്രെയിനിന്റെ പ്രീമിയം സബ്സ്ക്രിപ്ഷൻ എടുത്ത പോലെയാണല്ലോ. നീ ഒരു കാര്യം ചെയ്യ്... കുറച്ചു നേരം ശാന്തമായിരിക്ക്. പൈസ വരും, പക്ഷേ വന്ന സ്പീഡിൽ ഡെലിവറി ചാർജ്ജും കൊണ്ട് പോകും!",
-  "മയോണീസ് മോനേ... നിന്റെ പെരുവിരൽ കണ്ടിട്ടേ എനിക്ക് തോന്നി! വിദേശത്ത് പോകാൻ ഭയങ്കര ആഗ്രഹം അല്ലേ? പാസ്പോർട്ട് ഒക്കെ റെഡിയാക്കി വെച്ചോ, പക്ഷേ കയ്യിലെ വര പറയുന്നത് അനുസരിച്ച് ആദ്യം ആലുവ വഴി കാക്കനാട് വരെ പോയി ഒരു ബിസിനസ് ഡീൽ സെറ്റിൽ ആവേണ്ടി വരും!"
+  "മയോണീസ് മോനേ... നിന്റെ പെരുവിരൽ കണ്ടിട്ടേ എനിക്ക് തോന്നി! വിദേശത്ത് പോകാൻ ഭയങ്കര ആഗ്രഹം അല്ലേ? പാസ്പോർട്ട് ഒക്കെ റെഡിയാക്കി വെച്ചോ, പക്ഷേ കയ്യിലെ വര പറയുന്നത് അനുസരിച്ച് ആദ്യം ആലുവ വഴി കാക്കനാട് വരെ പോയി ഒരു ബിസിനസ് ഡീൽ സെറ്റിൽ ആവേണ്ടി വരും!",
+  "എടാ കൊടുകമ്പിളി... നിന്റെ വിധി കണ്ടിട്ട് ശരിക്കും കിളിപോയി! എല്ലാം ശരിയാകും എന്ന് കരുതി നീ ഇരിക്കണ്ട, പണി എടുത്താൽ മാത്രമേ കാര്യങ്ങൾ നടക്കൂ. എന്നാലും ചെറിയൊരു ഭാഗ്യം വഴിയിൽ കിടപ്പുണ്ട് കേട്ടോ!",
+  "വട്ടുണ്ടോ നിനക്ക്? ഈ വരകൾ ഒക്കെ എങ്ങോട്ടാണ് പോകുന്നത് എന്ന് വല്ല പിടിയും ഉണ്ടോ? നീ ഉദ്ദേശിക്കുന്ന കാര്യങ്ങൾ നടക്കും, പക്ഷേ കുറച്ചു ഉഡായിപ്പ് ഒക്കെ വേണ്ടി വരും. ശ്രദ്ധിച്ചു നടന്നോ!"
 ];
 
 // Fictional Category Interpretations
@@ -351,8 +357,8 @@ async function generateMaleMalayalamNeuralTTS(rawText: string, timeoutMs = 25000
         voice: "ml-IN-MidhunNeural",
         lang: "ml-IN",
         outputFormat: "audio-24khz-48kbitrate-mono-mp3",
-        pitch: "-10Hz", // Deep Fenrir voice
-        rate: "-10%"    // Deliberate pace
+        pitch: "-4Hz", // Authentic older male astrologer pitch
+        rate: "-2%"    // Natural, deliberate pace
       });
 
       const genPromise = tts.ttsPromise(cleaned, tmpFile);
@@ -396,8 +402,8 @@ async function generateMaleMalayalamNeuralTTS(rawText: string, timeoutMs = 25000
         voice: "ml-IN-MidhunNeural",
         lang: "ml-IN",
         outputFormat: "audio-24khz-48kbitrate-mono-mp3",
-        pitch: "-10Hz",
-        rate: "-10%"
+        pitch: "-4Hz",
+        rate: "-2%"
       });
 
       for (let i = 0; i < chunks.length; i++) {
@@ -513,14 +519,36 @@ async function generateF5MalayalamTTS(rawText: string, timeoutMs = 20000): Promi
 }
 
 /**
- * Main Malayalam Speech Audio Generator - strictly MALE voice Fenrir only.
- * Primary: High-fidelity Male Malayalam Neural Voice (Midhun / Fenrir).
- * Secondary: Native Malayalam Female Speech Engine (Google Translate tl=ml as fallback).
+ * Main Malayalam Speech Audio Generator - Routes based on voice name.
  */
-async function generateSpeechAudio(rawText: string, _voiceName = "male-astrologer", timeoutMs = 25000): Promise<string | null> {
+async function generateSpeechAudio(rawText: string, voiceName = "male-astrologer", timeoutMs = 25000): Promise<string | null> {
   const spokenText = cleanTextForTTS(rawText);
   if (!spokenText) return null;
 
+  if (voiceName === "female-astrologer") {
+    const cacheKey = `female:::${spokenText}`;
+    if (ttsAudioCache.has(cacheKey)) {
+      console.log(`[TTS-Female] Serving cached female audio for full paragraph: "${spokenText.slice(0, 30)}..."`);
+      return ttsAudioCache.get(cacheKey)!;
+    }
+
+    console.log(`[TTS-Female] Trying Female F5-TTS Malayalam v2 for: "${spokenText.slice(0, 40)}..."`);
+    const f5Audio = await generateF5MalayalamTTS(spokenText, 20000);
+    if (f5Audio) {
+      ttsAudioCache.set(cacheKey, f5Audio);
+      return f5Audio;
+    }
+
+    console.log(`[TTS-Female] Falling back to Native Malayalam Female Engine for full paragraph: "${spokenText.slice(0, 40)}..."`);
+    const nativeAudio = await generateNativeMalayalamTTS(spokenText);
+    if (nativeAudio) {
+      ttsAudioCache.set(cacheKey, nativeAudio);
+      return nativeAudio;
+    }
+    return null;
+  }
+
+  // Male Default
   const cacheKey = `male:::${spokenText}`;
   if (ttsAudioCache.has(cacheKey)) {
     console.log(`[TTS-Male] Serving cached male audio for full paragraph: "${spokenText.slice(0, 30)}..."`);
@@ -555,8 +583,8 @@ app.get("/api/health", (req, res) => {
     tagline: "Ninte kai onnu kaanikkeda...",
     llm_available: !!ai,
     mock_mode: !ai,
-    tts_model: "Deep Male Malayalam Voice (Midhun Neural / Fenrir)",
-    current_voice: "Male Astrologer (Fenrir / Midhun)"
+    tts_model: "Multi-Voice Malayalam (Midhun Neural / F5-TTS v2)",
+    current_voice: "Dual Astrologer System"
   });
 });
 
@@ -567,6 +595,11 @@ app.get("/api/voices", (req, res) => {
       id: "male-astrologer",
       name: "Male Malayalam Astrologer (Fenrir)",
       description: "Authentic Deep Male Kerala Astrologer Voice (Midhun Neural)"
+    },
+    {
+      id: "female-astrologer",
+      name: "Female Malayalam Astrologer (Unnimaya)",
+      description: "Authentic Female Kerala Astrologer Voice (F5-TTS v2)"
     }
   ];
   res.json({ voices, default: "male-astrologer" });
@@ -576,7 +609,7 @@ app.get("/api/voices", (req, res) => {
 app.post("/api/analyze-palm", async (req, res) => {
   try {
     const rawFeatures = req.body.features || {};
-    const requestedVoice = "Fenrir";
+    const requestedVoice = req.body.voice || "male-astrologer";
     const palmFeatures = {
       hand: rawFeatures.hand || "right",
       palm_width: rawFeatures.palm_width || 520,
@@ -612,13 +645,13 @@ app.post("/api/analyze-palm", async (req, res) => {
       }
     }
 
-    // Generate Malayalam AI model sound directly for the summary (Male Astrologer Voice - Fenrir)
+    // Generate Malayalam AI model sound directly for the summary
     let audioUrl = "/public/audio/completed.mp3";
     let audioFormat = "url";
     let ttsAvailable = false;
 
     try {
-      const generatedAudio = await generateSpeechAudio(summary, "male-astrologer", 25000);
+      const generatedAudio = await generateSpeechAudio(summary, requestedVoice, 25000);
       if (generatedAudio) {
         audioUrl = generatedAudio;
         audioFormat = "base64_wav";
@@ -635,7 +668,7 @@ app.post("/api/analyze-palm", async (req, res) => {
       audio_url: audioUrl,
       audio_format: audioFormat,
       tts_available: ttsAvailable,
-      voice: "male-astrologer"
+      voice: requestedVoice
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Palm analysis error" });
@@ -646,7 +679,7 @@ app.post("/api/analyze-palm", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const { message, palm_context, chat_history } = req.body;
-    const requestedVoice = "male-astrologer";
+    const requestedVoice = req.body.voice || "male-astrologer";
     if (!message) {
       return res.status(400).json({ error: "Message is required" });
     }
@@ -677,13 +710,13 @@ app.post("/api/chat", async (req, res) => {
       }
     }
 
-    // Generate Malayalam AI model sound for the chat reply (Male Astrologer Voice - Fenrir)
+    // Generate Malayalam AI model sound for the chat reply
     let audioUrl = "/public/audio/completed.mp3";
     let audioFormat = "url";
     let ttsAvailable = false;
 
     try {
-      const generatedAudio = await generateSpeechAudio(reply, "male-astrologer", 25000);
+      const generatedAudio = await generateSpeechAudio(reply, requestedVoice, 25000);
       if (generatedAudio) {
         audioUrl = generatedAudio;
         audioFormat = "base64_wav";
@@ -698,7 +731,7 @@ app.post("/api/chat", async (req, res) => {
       audio_url: audioUrl,
       audio_format: audioFormat,
       tts_available: ttsAvailable,
-      voice: "male-astrologer"
+      voice: requestedVoice
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Chat error" });
@@ -708,17 +741,18 @@ app.post("/api/chat", async (req, res) => {
 // 4. TTS Endpoint (Explicit on-demand Malayalam AI Voice synthesis)
 app.post("/api/tts", async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, voice } = req.body;
+    const requestedVoice = voice || "male-astrologer";
     if (!text) {
       return res.status(400).json({ error: "Text is required" });
     }
-    const audioDataUrl = await generateSpeechAudio(text, "male-astrologer", 25000);
+    const audioDataUrl = await generateSpeechAudio(text, requestedVoice, 25000);
     if (audioDataUrl) {
       return res.json({
         audio_url: audioDataUrl,
         format: "base64_wav",
         text,
-        voice: "male-astrologer",
+        voice: requestedVoice,
         tts_available: true
       });
     }
@@ -726,7 +760,7 @@ app.post("/api/tts", async (req, res) => {
       audio_url: "/public/audio/completed.mp3",
       format: "url",
       text,
-      voice: "male-astrologer",
+      voice: requestedVoice,
       tts_available: false
     });
   } catch (err: any) {
@@ -734,7 +768,7 @@ app.post("/api/tts", async (req, res) => {
       audio_url: "/public/audio/completed.mp3",
       format: "url",
       text: req.body?.text || "",
-      voice: "male-astrologer",
+      voice: req.body?.voice || "male-astrologer",
       tts_available: false
     });
   }

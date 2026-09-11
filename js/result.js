@@ -68,7 +68,7 @@ class ResultController {
     if (this.waveformEl) this.waveformEl.style.display = "flex";
     if (this.playVoiceBtn) this.playVoiceBtn.textContent = "⏹ STOP VOICE";
 
-    const selectedVoice = "Fenrir";
+    const selectedVoice = window.app ? window.app.activeVoice : "male-astrologer";
     const audioUrl = this.currentData.audio_url || null;
     const speechText = this.currentData.summary || "";
 
@@ -79,7 +79,8 @@ class ResultController {
     } finally {
       this.isPlaying = false;
       if (this.waveformEl) this.waveformEl.style.display = "none";
-      if (this.playVoiceBtn) this.playVoiceBtn.textContent = "🔊 PLAY MALE VOICE";
+      const btnText = window.app && window.app.activeVoice === "female-astrologer" ? "🔊 PLAY FEMALE VOICE" : "🔊 PLAY MALE VOICE";
+      if (this.playVoiceBtn) this.playVoiceBtn.textContent = btnText;
     }
   }
 
@@ -88,7 +89,8 @@ class ResultController {
       window.audioController.stopAudio();
       this.isPlaying = false;
       if (this.waveformEl) this.waveformEl.style.display = "none";
-      if (this.playVoiceBtn) this.playVoiceBtn.textContent = "🔊 PLAY MALE VOICE";
+      const btnText = window.app && window.app.activeVoice === "female-astrologer" ? "🔊 PLAY FEMALE VOICE" : "🔊 PLAY MALE VOICE";
+      if (this.playVoiceBtn) this.playVoiceBtn.textContent = btnText;
     } else {
       window.audioController.unlockAudio();
       if ('speechSynthesis' in window) {

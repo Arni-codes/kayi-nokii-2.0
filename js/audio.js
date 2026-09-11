@@ -369,7 +369,7 @@ class AudioController {
     // 1. Direct Malayalam AI Model Sound (Base64 WAV)
     if (audioUrl && audioUrl.startsWith("data:audio/")) {
       try {
-        const played = await this.playAudioUrl(audioUrl);
+        const played = await this.playAudioUrl(audioUrl, voice);
         if (played) {
           if (this.onPlayStateChange) this.onPlayStateChange(false);
           return true;
@@ -395,7 +395,7 @@ class AudioController {
               // Temporary 25s pause for rate limits
               this.serverTTSCooldownUntil = Date.now() + 25 * 1000;
             } else if (ttsData.audio_url && ttsData.audio_url.startsWith("data:audio/")) {
-              const played = await this.playAudioUrl(ttsData.audio_url);
+              const played = await this.playAudioUrl(ttsData.audio_url, voice);
               if (played) {
                 if (this.onPlayStateChange) this.onPlayStateChange(false);
                 return true;
@@ -419,7 +419,7 @@ class AudioController {
 
       // Only attempt browser speech if the OS actually has a native Malayalam voice installed
       if (fallbackText) {
-        await this.speakFallbackSpeech(fallbackText);
+        await this.speakFallbackSpeech(fallbackText, voice);
       }
     } catch (e) {
       console.warn("Fallback Kerala astrologer audio error:", e);
@@ -429,14 +429,14 @@ class AudioController {
   }
 
   /**
-   * Plays a data: audio URL using HTML5 Audio or Web Audio Context with deep resonance.
+   * Plays a data: audio URL using HTML5 Audio or Web Audio Context with dynamic resonance.
    */
-  playAudioUrl(url) {
+  playAudioUrl(url, voice = "male-astrologer") {
     return new Promise(async (resolve, reject) => {
       this.stopAudio();
       this.initContext();
 
-      // Attempt 1: Web Audio Context Buffer decoding with Deep Astrologer resonance
+      // Attempt 1: Web Audio Context Buffer decoding
       if (this.audioContext) {
         try {
           if (this.audioContext.state === 'suspended') {
@@ -448,25 +448,38 @@ class AudioController {
 
           const source = this.audioContext.createBufferSource();
           source.buffer = audioBuffer;
-          source.playbackRate.value = 0.94; // slightly deliberate Kerala astrologer cadence
-
-          // Deep Astrologer chest resonance (Fenrir tone booster)
-          const bassBoost = this.audioContext.createBiquadFilter();
-          bassBoost.type = "lowshelf";
-          bassBoost.frequency.value = 240;
-          bassBoost.gain.value = 5.5;
-
-          const midWarmth = this.audioContext.createBiquadFilter();
-          midWarmth.type = "peaking";
-          midWarmth.frequency.value = 600;
-          midWarmth.gain.value = 2.0;
 
           const gainNode = this.audioContext.createGain();
           gainNode.gain.value = 1.0;
 
-          source.connect(bassBoost);
-          bassBoost.connect(midWarmth);
-          midWarmth.connect(gainNode);
+          if (voice === "male-astrologer") {
+            source.playbackRate.value = 0.98; // slightly deliberate but natural
+            
+            // Authentic Astrologer resonance (warm and slightly nasal chanting tone)
+            const warmth = this.audioContext.createBiquadFilter();
+            warmth.type = "lowshelf";
+            warmth.frequency.value = 250;
+            warmth.gain.value = 2.0;
+
+            const presence = this.audioContext.createBiquadFilter();
+            presence.type = "peaking";
+            presence.frequency.value = 1200;
+            presence.gain.value = 1.5;
+
+            source.connect(warmth);
+            warmth.connect(presence);
+            presence.connect(gainNode);
+          } else {
+            // Female Voice
+            source.playbackRate.value = 1.0;
+            const warmFilter = this.audioContext.createBiquadFilter();
+            warmFilter.type = "peaking";
+            warmFilter.frequency.value = 2400;
+            warmFilter.gain.value = 1.2;
+            source.connect(warmFilter);
+            warmFilter.connect(gainNode);
+          }
+
           gainNode.connect(this.audioContext.destination);
 
           this.currentSourceNode = source;
@@ -515,7 +528,7 @@ class AudioController {
    * Only uses browser SpeechSynthesis IF an authentic Malayalam voice is installed.
    * NEVER speaks in a plain robotic English voice.
    */
-  speakFallbackSpeech(text) {
+  speakFallbackSpeech(text, voice = "male-astrologer") {
     return new Promise((resolve) => {
       if (!text || this.isMuted) {
         resolve(false);
@@ -535,9 +548,10 @@ class AudioController {
 
         const voices = this.voices.length > 0 ? this.voices : (window.speechSynthesis.getVoices() || []);
 
-        // Find strictly authentic native Malayalam male voice
+        const isMale = !voice || voice === 'male-astrologer';
         const maleVoice = voices.find(v => v.lang && (v.lang.startsWith('ml') || v.lang.toLowerCase().includes('malayalam')) && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('midhun') || !v.name.toLowerCase().includes('female')));
-        const mlVoice = maleVoice || voices.find(v => v.lang && (v.lang.startsWith('ml') || v.lang.toLowerCase().includes('malayalam')));
+        const femaleVoice = voices.find(v => v.lang && (v.lang.startsWith('ml') || v.lang.toLowerCase().includes('malayalam')) && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('sobhana') || !v.name.toLowerCase().includes('male')));
+        const mlVoice = isMale ? (maleVoice || voices.find(v => v.lang && (v.lang.startsWith('ml') || v.lang.toLowerCase().includes('malayalam')))) : (femaleVoice || voices.find(v => v.lang && (v.lang.startsWith('ml') || v.lang.toLowerCase().includes('malayalam'))));
 
         // If the client system does NOT have an authentic Malayalam voice, DO NOT use plain robotic English TTS
         if (!mlVoice) {
@@ -553,8 +567,15 @@ class AudioController {
             this.currentUtterance = utterance;
             utterance.voice = mlVoice;
             utterance.lang = mlVoice.lang || 'ml-IN';
-            utterance.rate = 0.88; // deliberate, authentic tempo
-            utterance.pitch = 0.68; // deep male astrologer pitch
+            
+            if (!voice || voice === 'male-astrologer') {
+              utterance.rate = 0.90; // noticeably deliberate
+              utterance.pitch = 0.85; // natural deep male astrologer pitch
+            } else {
+              utterance.rate = 0.95; // natural tempo
+              utterance.pitch = 1.05; // natural female astrologer pitch
+            }
+            
             utterance.volume = 1.0;
 
             let resolved = false;
