@@ -127,7 +127,7 @@ class ChatController {
       audioBtn.className = "btn btn-secondary btn-sm message-audio-btn";
       audioBtn.style.fontSize = "11px";
       audioBtn.style.padding = "4px 8px";
-      audioBtn.innerHTML = "▶ 🔊 PLAY MALAYALAM VOICE";
+      audioBtn.innerHTML = "▶ 🔊 PLAY FEMALE VOICE";
       audioBtn.onclick = () => {
         window.audioController.unlockAudio();
         if ('speechSynthesis' in window) {

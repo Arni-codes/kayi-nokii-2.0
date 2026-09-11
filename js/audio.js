@@ -448,25 +448,19 @@ class AudioController {
 
           const source = this.audioContext.createBufferSource();
           source.buffer = audioBuffer;
-          source.playbackRate.value = 0.94; // slightly deliberate Kerala astrologer cadence
+          source.playbackRate.value = 1.0; // natural tempo
 
-          // Deep Astrologer chest resonance (Fenrir tone booster)
-          const bassBoost = this.audioContext.createBiquadFilter();
-          bassBoost.type = "lowshelf";
-          bassBoost.frequency.value = 240;
-          bassBoost.gain.value = 5.5;
-
-          const midWarmth = this.audioContext.createBiquadFilter();
-          midWarmth.type = "peaking";
-          midWarmth.frequency.value = 600;
-          midWarmth.gain.value = 2.0;
+          // Subtle warm acoustic presence for female astrologer voice
+          const warmFilter = this.audioContext.createBiquadFilter();
+          warmFilter.type = "peaking";
+          warmFilter.frequency.value = 2400;
+          warmFilter.gain.value = 1.2;
 
           const gainNode = this.audioContext.createGain();
           gainNode.gain.value = 1.0;
 
-          source.connect(bassBoost);
-          bassBoost.connect(midWarmth);
-          midWarmth.connect(gainNode);
+          source.connect(warmFilter);
+          warmFilter.connect(gainNode);
           gainNode.connect(this.audioContext.destination);
 
           this.currentSourceNode = source;
@@ -513,7 +507,7 @@ class AudioController {
 
   /**
    * Only uses browser SpeechSynthesis IF an authentic Malayalam voice is installed.
-   * NEVER speaks in a plain robotic English voice.
+   * Prefers native female Malayalam voice (Sobhana / Unnimaya).
    */
   speakFallbackSpeech(text) {
     return new Promise((resolve) => {
@@ -535,8 +529,9 @@ class AudioController {
 
         const voices = this.voices.length > 0 ? this.voices : (window.speechSynthesis.getVoices() || []);
 
-        // Find strictly authentic native Malayalam voice
-        const mlVoice = voices.find(v => v.lang && (v.lang.startsWith('ml') || v.lang.toLowerCase().includes('malayalam')));
+        // Find authentic native Malayalam female voice
+        const femaleVoice = voices.find(v => v.lang && (v.lang.startsWith('ml') || v.lang.toLowerCase().includes('malayalam')) && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('sobhana') || !v.name.toLowerCase().includes('male')));
+        const mlVoice = femaleVoice || voices.find(v => v.lang && (v.lang.startsWith('ml') || v.lang.toLowerCase().includes('malayalam')));
 
         // If the client system does NOT have an authentic Malayalam voice, DO NOT use plain robotic English TTS
         if (!mlVoice) {
@@ -552,8 +547,8 @@ class AudioController {
             this.currentUtterance = utterance;
             utterance.voice = mlVoice;
             utterance.lang = mlVoice.lang || 'ml-IN';
-            utterance.rate = 0.85; // deliberate, authentic tempo
-            utterance.pitch = 0.72; // deep astrologer pitch
+            utterance.rate = 0.95; // natural tempo
+            utterance.pitch = 1.05; // natural female astrologer pitch
             utterance.volume = 1.0;
 
             let resolved = false;

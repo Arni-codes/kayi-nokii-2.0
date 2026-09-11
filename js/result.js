@@ -79,7 +79,7 @@ class ResultController {
     } finally {
       this.isPlaying = false;
       if (this.waveformEl) this.waveformEl.style.display = "none";
-      if (this.playVoiceBtn) this.playVoiceBtn.textContent = "🔊 PLAY MALAYALAM VOICE";
+      if (this.playVoiceBtn) this.playVoiceBtn.textContent = "🔊 PLAY FEMALE VOICE";
     }
   }
 
@@ -88,7 +88,7 @@ class ResultController {
       window.audioController.stopAudio();
       this.isPlaying = false;
       if (this.waveformEl) this.waveformEl.style.display = "none";
-      if (this.playVoiceBtn) this.playVoiceBtn.textContent = "🔊 PLAY MALAYALAM VOICE";
+      if (this.playVoiceBtn) this.playVoiceBtn.textContent = "🔊 PLAY FEMALE VOICE";
     } else {
       window.audioController.unlockAudio();
       if ('speechSynthesis' in window) {
