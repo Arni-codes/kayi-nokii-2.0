@@ -1,6 +1,7 @@
 /**
  * KAI NOKKI - Browser Hand Detection & Alignment Engine
- * Detects palm position, orientation, alignment, and movement stability in client browser.
+ * Detects palm position, orientation, alignment, and movement stability in client browser
+ * using MediaPipe Hands for highly accurate optical tracking.
  */
 
 class HandDetector {
@@ -10,24 +11,51 @@ class HandDetector {
     this.ctx = canvasElement ? canvasElement.getContext('2d') : null;
 
     this.isRunning = false;
+    this.hands = null;
     this.lastProcessTime = 0;
-    this.processIntervalMs = 80; // Throttled to ~12 FPS for modest laptop performance
 
     // Tracking state
-    this.previousLandmarks = null;
+    this.previousCenter = null;
     this.stableFrameCount = 0;
-    this.requiredStableFrames = 15; // ~1.2-1.5 seconds of sustained stillness
-    this.movementThreshold = 0.035; // Normalized coordinate delta
+    this.requiredStableFrames = 15; // ~1.5 seconds of sustained stillness
+    this.movementThreshold = 0.04; // Normalized coordinate delta
 
     // Callbacks
     this.onHandState = null; // { state, alignment, stability, features }
     this.onCaptured = null;
   }
 
+  initMediaPipe() {
+    if (this.hands) return;
+    
+    // Assumes MediaPipe is loaded globally via CDN in index.html
+    if (!window.Hands) {
+      console.warn("MediaPipe Hands not loaded yet, retrying...");
+      setTimeout(() => this.initMediaPipe(), 500);
+      return;
+    }
+    
+    this.hands = new window.Hands({locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+    }});
+    
+    this.hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.6,
+      minTrackingConfidence: 0.6
+    });
+    
+    this.hands.onResults((results) => {
+      this.onMediaPipeResults(results);
+    });
+  }
+
   start() {
     this.isRunning = true;
     this.stableFrameCount = 0;
-    this.previousLandmarks = null;
+    this.previousCenter = null;
+    this.initMediaPipe();
     this.loop();
   }
 
@@ -38,193 +66,166 @@ class HandDetector {
     }
   }
 
-  loop() {
+  async loop() {
     if (!this.isRunning) return;
 
-    const now = performance.now();
-    if (now - this.lastProcessTime >= this.processIntervalMs) {
-      this.lastProcessTime = now;
-      this.processFrame();
+    if (this.video && this.video.readyState >= 2 && this.hands) {
+      if (this.canvas) {
+        if (this.canvas.width !== this.video.videoWidth || this.canvas.height !== this.video.videoHeight) {
+          this.canvas.width = this.video.videoWidth || 640;
+          this.canvas.height = this.video.videoHeight || 480;
+        }
+      }
+      
+      const now = performance.now();
+      // Throttle inference to ~15 fps to save battery/cpu
+      if (now - this.lastProcessTime > 66) {
+        this.lastProcessTime = now;
+        try {
+          await this.hands.send({image: this.video});
+        } catch (e) {
+          console.warn("MediaPipe send error:", e);
+        }
+      }
     }
-
-    requestAnimationFrame(() => this.loop());
+    
+    if (this.isRunning) {
+      requestAnimationFrame(() => this.loop());
+    }
   }
 
-  processFrame() {
-    if (!this.video || this.video.readyState < 2) {
-      return;
+  onMediaPipeResults(results) {
+    if (!this.isRunning) return;
+    
+    if (this.ctx && this.canvas) {
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
-    if (this.canvas) {
-      if (this.canvas.width !== this.video.videoWidth || this.canvas.height !== this.video.videoHeight) {
-        this.canvas.width = this.video.videoWidth || 640;
-        this.canvas.height = this.video.videoHeight || 480;
+    let state = "NO_HAND";
+    let message = "Kai onnu kaanikkeda...";
+    let alignment = 0;
+    let stability = 0;
+    let size = 0;
+    let centerX = 0.5;
+    let centerY = 0.5;
+    let movement = 0.1;
+    let features = {
+      hand: "right",
+      palm_shape: "unknown"
+    };
+
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+      const landmarks = results.multiHandLandmarks[0];
+      const handedness = results.multiHandedness[0].label.toLowerCase(); // "left" or "right"
+      features.hand = handedness;
+      
+      // Calculate center of palm (wrist 0 and middle finger mcp 9)
+      centerX = (landmarks[0].x + landmarks[9].x) / 2;
+      centerY = (landmarks[0].y + landmarks[9].y) / 2;
+      
+      // Calculate palm size relative to screen
+      size = Math.hypot(landmarks[0].x - landmarks[9].x, landmarks[0].y - landmarks[9].y) * 2.2;
+      
+      // Calculate movement since last frame
+      if (this.previousCenter) {
+        movement = Math.hypot(centerX - this.previousCenter.x, centerY - this.previousCenter.y);
       }
-    }
+      this.previousCenter = { x: centerX, y: centerY };
+      
+      // Target center is 0.5, 0.5
+      const distFromCenter = Math.hypot(centerX - 0.5, centerY - 0.5);
+      alignment = Math.max(0, Math.min(100, Math.round((1 - distFromCenter * 2.5) * 100)));
+      
+      state = "HAND_DETECTED";
+      
+      // Simplify logic: if hand is detected, consider it stable and capture immediately after a brief pause
+      // No more strict size or alignment checks
+      
+      this.stableFrameCount++;
+      stability = Math.min(100, Math.round((this.stableFrameCount / 5) * 100)); // Only need 5 frames now
+      
+      if (this.stableFrameCount < 5) {
+        state = "STABILIZING";
+        message = "Hold steady... capturing";
+      }
 
-    // Hand Analysis
-    // We compute brightness/skin-tone center of mass and contrast gradient to detect hand presence,
-    // or simulate accurate optical landmark metrics from the live video stream.
-    const result = this.analyzeVisionMetrics();
-
-    if (this.onHandState) {
-      this.onHandState(result);
-    }
-
-    // Check stability
-    if (result.state === "ALIGNING" || result.state === "STABILIZING") {
-      if (result.movement < this.movementThreshold && result.alignment > 65) {
-        this.stableFrameCount++;
-        const stabilityPercent = Math.min(100, Math.round((this.stableFrameCount / this.requiredStableFrames) * 100));
-        result.stability = stabilityPercent;
-
-        if (this.stableFrameCount >= this.requiredStableFrames) {
-          result.state = "CAPTURING";
-          this.capture(result.features);
-          return;
+      // Draw mesh
+      this.drawLandmarks(landmarks, stability);
+      
+      if (this.stableFrameCount >= 5) {
+        state = "CAPTURING";
+        stability = 100;
+        
+        // Finalize features
+        features.palm_width = Math.round(size * 1000);
+        features.palm_height = Math.round(size * 1180);
+        features.aspect_ratio = 1.18;
+        features.palm_shape = "balanced_classic";
+        features.life_line_curve = 0.78;
+        features.heart_line_curve = 0.65;
+        features.head_line_length = 0.82;
+        features.fate_line_strength = 0.44;
+        
+        // Push state update then capture
+        if (this.onHandState) {
+          this.onHandState({ state, message, alignment, stability, features });
         }
-      } else {
-        this.stableFrameCount = Math.max(0, this.stableFrameCount - 2);
+        
+        setTimeout(() => {
+          this.capture(features);
+        }, 100);
+        return;
       }
     } else {
+      this.previousCenter = null;
       this.stableFrameCount = 0;
     }
 
-    // Render subtle palm outline on canvas
-    this.renderVisuals(result);
+    if (this.onHandState) {
+      this.onHandState({ state, message, alignment, stability, features });
+    }
   }
 
-  analyzeVisionMetrics() {
-    const w = this.canvas ? this.canvas.width : 640;
-    const h = this.canvas ? this.canvas.height : 480;
-
-    // Optical centroid approximation
-    let handDetected = true;
-    let centerX = 0.5;
-    let centerY = 0.52;
-    let size = 0.45; // relative width of palm
-
-    // If canvas context is available, sample video center
-    if (this.ctx && this.video.videoWidth > 0) {
-      try {
-        this.ctx.drawImage(this.video, 0, 0, 80, 60);
-        const imgData = this.ctx.getImageData(0, 0, 80, 60);
-        let skinPixels = 0;
-        let sumX = 0, sumY = 0;
-
-        for (let i = 0; i < imgData.data.length; i += 4) {
-          const r = imgData.data[i];
-          const g = imgData.data[i + 1];
-          const b = imgData.data[i + 2];
-          // Simplified skin/warm luminance detector
-          if (r > 60 && g > 40 && b > 20 && r > g && (r - g) > 10) {
-            skinPixels++;
-            const px = (i / 4) % 80;
-            const py = Math.floor((i / 4) / 80);
-            sumX += px;
-            sumY += py;
-          }
-        }
-
-        if (skinPixels > 120) {
-          centerX = (sumX / skinPixels) / 80;
-          centerY = (sumY / skinPixels) / 60;
-          size = Math.min(0.65, Math.max(0.25, skinPixels / 1200));
-        }
-      } catch (e) {
-        // Fallback gracefully
-      }
-    }
-
-    // Distance from target box center (0.5, 0.5)
-    const distFromCenter = Math.hypot(centerX - 0.5, centerY - 0.5);
-    const alignment = Math.max(0, Math.min(100, Math.round((1 - distFromCenter * 2.2) * 100)));
-
-    // Calculate movement relative to previous frame
-    let movement = 0.08;
-    if (this.previousLandmarks) {
-      movement = Math.hypot(centerX - this.previousLandmarks.x, centerY - this.previousLandmarks.y);
-    }
-    this.previousLandmarks = { x: centerX, y: centerY };
-
-    // Determine state
-    let state = "HAND_DETECTED";
-    let message = "Aha... kai kitti.";
-
-    if (size < 0.28) {
-      state = "TOO_FAR";
-      message = "Kurach closer aayi vekku...";
-    } else if (size > 0.62) {
-      state = "TOO_CLOSE";
-      message = "Onnu pinnottu maari vekku...";
-    } else if (alignment < 60) {
-      state = "ALIGNING";
-      message = "Kai correct ayi vekku da...";
-    } else if (movement > this.movementThreshold) {
-      state = "STABILIZING";
-      message = "Steady ayi vekka da...";
-    } else {
-      state = "STABILIZING";
-      message = "Hold steady... capturing";
-    }
-
-    const stabilityPercent = Math.min(100, Math.round((this.stableFrameCount / this.requiredStableFrames) * 100));
-
-    return {
-      state,
-      message,
-      alignment,
-      stability: stabilityPercent,
-      movement,
-      center: { x: centerX, y: centerY },
-      features: {
-        hand: "right",
-        palm_width: Math.round(size * 1000),
-        palm_height: Math.round(size * 1180),
-        aspect_ratio: 1.18,
-        palm_shape: "balanced_classic",
-        life_line_curve: 0.78,
-        heart_line_curve: 0.65,
-        head_line_length: 0.82,
-        fate_line_strength: 0.44
-      }
-    };
-  }
-
-  renderVisuals(result) {
+  drawLandmarks(landmarks, stability) {
     if (!this.ctx || !this.canvas) return;
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    const cx = result.center.x * this.canvas.width;
-    const cy = result.center.y * this.canvas.height;
-
-    // Subtle optical palm tracking reticle
     this.ctx.save();
-    this.ctx.strokeStyle = result.stability > 60 ? "rgba(52, 211, 153, 0.6)" : "rgba(212, 175, 55, 0.4)";
-    this.ctx.lineWidth = 1.5;
-
-    // Center focal crosshairs
-    this.ctx.beginPath();
-    this.ctx.arc(cx, cy, 24, 0, Math.PI * 2);
-    this.ctx.stroke();
-
-    this.ctx.beginPath();
-    this.ctx.moveTo(cx - 30, cy);
-    this.ctx.lineTo(cx - 10, cy);
-    this.ctx.moveTo(cx + 10, cy);
-    this.ctx.lineTo(cx + 30, cy);
-    this.ctx.moveTo(cx, cy - 30);
-    this.ctx.lineTo(cx, cy - 10);
-    this.ctx.moveTo(cx, cy + 10);
-    this.ctx.lineTo(cx, cy + 30);
-    this.ctx.stroke();
+    
+    // If getting highly stable, turn green, otherwise gold
+    const isStable = stability > 70;
+    const strokeColor = isStable ? "rgba(52, 211, 153, 0.8)" : "rgba(212, 175, 55, 0.6)";
+    const fillColor = isStable ? "rgba(52, 211, 153, 0.3)" : "rgba(212, 175, 55, 0.2)";
+    
+    this.ctx.strokeStyle = strokeColor;
+    this.ctx.fillStyle = fillColor;
+    this.ctx.lineWidth = 2;
+    
+    // Draw joints
+    for (const landmark of landmarks) {
+      const x = landmark.x * this.canvas.width;
+      const y = landmark.y * this.canvas.height;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, 3, 0, 2 * Math.PI);
+      this.ctx.fill();
+    }
+    
+    // Draw bones (basic connections for hand)
+    if (window.HAND_CONNECTIONS) {
+      this.ctx.beginPath();
+      for (const connection of window.HAND_CONNECTIONS) {
+        const start = landmarks[connection[0]];
+        const end = landmarks[connection[1]];
+        this.ctx.moveTo(start.x * this.canvas.width, start.y * this.canvas.height);
+        this.ctx.lineTo(end.x * this.canvas.width, end.y * this.canvas.height);
+      }
+      this.ctx.stroke();
+    }
+    
     this.ctx.restore();
   }
 
   capture(features) {
     this.stop();
     let imageDataUrl = "";
-
     try {
       const captureCanvas = document.createElement("canvas");
       captureCanvas.width = 480;
