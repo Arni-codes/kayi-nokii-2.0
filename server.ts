@@ -452,10 +452,71 @@ async function getF5MalayalamClient(): Promise<any> {
 }
 
 /**
+ * Synthesizes Malayalam speech using the fine-tuned female F5-TTS model (sajilck/f5-tts-malayalam-v2).
+ * Operates with 16 NFE steps on ZeroGPU.
+ */
+async function generateF5MalayalamTTS(rawText: string, timeoutMs = 20000): Promise<string | null> {
+  const cleaned = cleanTextForTTS(rawText);
+  if (!cleaned) return null;
+
+  const cacheKey = `f5_v2_female:::${cleaned}`;
+  if (ttsAudioCache.has(cacheKey)) {
+    console.log(`[F5-TTS] Serving cached audio for: "${cleaned.slice(0, 30)}..."`);
+    return ttsAudioCache.get(cacheKey)!;
+  }
+
+  // F5-TTS works best with shorter chunks (up to ~200 chars). We will synthesize the first chunk 
+  // to avoid space timeouts, since it's a demo space.
+  const sentences = cleaned.split(/(?<=[.!?|।\n])/).map((s) => s.trim()).filter(Boolean);
+  const targetText = (sentences.slice(0, 3).join(" ").slice(0, 200).trim()) || cleaned.slice(0, 200).trim();
+
+  try {
+    const client = await getF5MalayalamClient();
+    if (!client) return null;
+
+    console.log(`[F5-TTS] Synthesizing speech with sajilck/f5-tts-malayalam-v2 for: "${targetText.slice(0, 40)}..."`);
+    // Map arguments by position as the space expects: [ref_audio, ref_text, gen_text, nfe_step, fix_duration, seed]
+    const predictPromise = client.predict("/synthesize", [
+      null, // ref_audio (null uses the space's default if any or ignores)
+      "ഇത് ഒരു സാംപിൾ ഓഡിയോ ആണ്. ഞാൻ എന്റെ മാക്‌ബുക്കിൽ, മാക്‌ബുക്കിന്റെ തന്നെ ഹെഡ്‍ഫോൺ ഉപയോഗിച്ചു റെക്കോർഡ് ചെയ്യുന്ന ഒരു ഓഡിയോ ആണ്. ഇത് ഞാൻ",
+      targetText,
+      16, // nfe_step
+      0,  // fix_duration
+      -1  // seed
+    ]);
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("F5-TTS generation timeout")), timeoutMs)
+    );
+
+    const result: any = await Promise.race([predictPromise, timeoutPromise]);
+    const fileUrl = result?.data?.[0]?.url;
+
+    if (fileUrl) {
+      const resp = await fetch(fileUrl);
+      if (resp.ok) {
+        const arrayBuf = await resp.arrayBuffer();
+        const buf = Buffer.from(arrayBuf);
+        if (buf.length > 500) {
+          const dataUrl = `data:audio/wav;base64,${buf.toString("base64")}`;
+          ttsAudioCache.set(cacheKey, dataUrl);
+          console.log(`[F5-TTS] Successfully generated ${buf.length} bytes of audio using sajilck/f5-tts-malayalam-v2`);
+          return dataUrl;
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn("[F5-TTS] sajilck/f5-tts-malayalam-v2 generation error:", err?.message || err);
+  }
+
+  return null;
+}
+
+/**
  * Main Malayalam Speech Audio Generator - strictly FEMALE voice only.
- * Primary: High-fidelity Female Malayalam Neural Voice (Sobhana / Unnimaya).
- * Secondary: Native Malayalam Female Speech Engine (Google Translate tl=ml).
- * Completely reads out the entire paragraph.
+ * Primary: Fine-tuned Female F5-TTS model (sajilck/v2).
+ * Secondary: High-fidelity Female Malayalam Neural Voice (Sobhana / Unnimaya).
+ * Tertiary: Native Malayalam Female Speech Engine (Google Translate tl=ml).
  */
 async function generateSpeechAudio(rawText: string, _voiceName = "female-astrologer", timeoutMs = 25000): Promise<string | null> {
   const spokenText = cleanTextForTTS(rawText);
@@ -467,7 +528,15 @@ async function generateSpeechAudio(rawText: string, _voiceName = "female-astrolo
     return ttsAudioCache.get(cacheKey)!;
   }
 
-  // 1. Primary: High-fidelity Female Malayalam Neural Voice (ml-IN-SobhanaNeural)
+  // 1. Primary: Female F5-TTS Malayalam v2 (sajilck/f5-tts-malayalam-v2)
+  console.log(`[TTS-Female] Trying Female F5-TTS Malayalam v2 for: "${spokenText.slice(0, 40)}..."`);
+  const f5Audio = await generateF5MalayalamTTS(spokenText, 20000);
+  if (f5Audio) {
+    ttsAudioCache.set(cacheKey, f5Audio);
+    return f5Audio;
+  }
+
+  // 2. Secondary: High-fidelity Female Malayalam Neural Voice (ml-IN-SobhanaNeural)
   console.log(`[TTS-Female] Synthesizing Female Malayalam Voice (Sobhana) for full paragraph (${spokenText.length} chars): "${spokenText.slice(0, 40)}..."`);
   const femaleAudio = await generateFemaleMalayalamNeuralTTS(spokenText, timeoutMs);
   if (femaleAudio) {
@@ -475,7 +544,7 @@ async function generateSpeechAudio(rawText: string, _voiceName = "female-astrolo
     return femaleAudio;
   }
 
-  // 2. Fallback: Native Malayalam Female Speech Engine (Google Translate tl=ml)
+  // 3. Fallback: Native Malayalam Female Speech Engine (Google Translate tl=ml)
   console.log(`[TTS-Female] Falling back to Native Malayalam Female Engine for full paragraph: "${spokenText.slice(0, 40)}..."`);
   const nativeAudio = await generateNativeMalayalamTTS(spokenText);
   if (nativeAudio) {
@@ -495,8 +564,8 @@ app.get("/api/health", (req, res) => {
     tagline: "Ninte kai onnu kaanikkeda...",
     llm_available: !!ai,
     mock_mode: !ai,
-    tts_model: "Female Malayalam Voice (Sobhana Neural / Unnimaya)",
-    current_voice: "Female Astrologer (Unnimaya / Sobhana)"
+    tts_model: "Female Malayalam Voice (F5-TTS v2 / Sobhana Neural / Unnimaya)",
+    current_voice: "Female Astrologer (F5-TTS / Sobhana)"
   });
 });
 
@@ -505,8 +574,8 @@ app.get("/api/voices", (req, res) => {
   const voices = [
     {
       id: "female-astrologer",
-      name: "Female Malayalam Astrologer (Unnimaya)",
-      description: "Authentic Female Kerala Astrologer Voice (Sobhana Neural & Native ML)"
+      name: "Female Malayalam Astrologer (F5-TTS)",
+      description: "Authentic Female Kerala Astrologer Voice (F5-TTS v2 & Sobhana Neural)"
     }
   ];
   res.json({ voices, default: "female-astrologer" });
