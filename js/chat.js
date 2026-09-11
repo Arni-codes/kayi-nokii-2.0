@@ -114,7 +114,7 @@ class ChatController {
     const msgEl = document.createElement("div");
     msgEl.className = `chat-message ${msg.role}`;
 
-    const senderName = msg.role === "user" ? "YOU" : "UNNIMAYA KAI NOKKI";
+    const senderName = msg.role === "user" ? "YOU" : "FENRIR KAI NOKKI";
 
     msgEl.innerHTML = `
       <span class="message-sender">${senderName}</span>
@@ -127,7 +127,7 @@ class ChatController {
       audioBtn.className = "btn btn-secondary btn-sm message-audio-btn";
       audioBtn.style.fontSize = "11px";
       audioBtn.style.padding = "4px 8px";
-      audioBtn.innerHTML = "▶ 🔊 PLAY FEMALE VOICE";
+      audioBtn.innerHTML = "▶ 🔊 PLAY MALE VOICE";
       audioBtn.onclick = () => {
         window.audioController.unlockAudio();
         if ('speechSynthesis' in window) {
