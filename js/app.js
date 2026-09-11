@@ -295,12 +295,15 @@ class App {
 
     try {
       let response;
+      const activeVoice = "Fenrir";
       if (this.mockMode) {
         response = window.apiClient.generateMockAnalysis(capturedData);
+        response.voice = "Fenrir";
       } else {
         response = await window.apiClient.analyzePalm({
           image: capturedData.image,
-          features: capturedData.features
+          features: capturedData.features,
+          voice: "Fenrir"
         });
       }
 

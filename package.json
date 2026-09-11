@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && cp -r index.html camera.html css js public dist/ 2>/dev/null || true",
+    "build": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && cp -r index.html camera.html css js public persona_prompt.txt reference_vocabulary.json dist/ 2>/dev/null || true",
     "start": "node dist/server.cjs",
     "preview": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",

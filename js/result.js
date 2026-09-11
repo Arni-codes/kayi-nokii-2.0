@@ -68,17 +68,18 @@ class ResultController {
     if (this.waveformEl) this.waveformEl.style.display = "flex";
     if (this.playVoiceBtn) this.playVoiceBtn.textContent = "⏹ STOP VOICE";
 
-    const audioUrl = this.currentData.audio_url;
+    const selectedVoice = "Fenrir";
+    const audioUrl = this.currentData.audio_url || null;
     const speechText = this.currentData.summary || "";
 
     try {
-      await window.audioController.playResultAudio(audioUrl, speechText);
+      await window.audioController.playResultAudio(audioUrl, speechText, selectedVoice);
     } catch (e) {
       console.warn("Playback error:", e);
     } finally {
       this.isPlaying = false;
       if (this.waveformEl) this.waveformEl.style.display = "none";
-      if (this.playVoiceBtn) this.playVoiceBtn.textContent = "🔊 PLAY JOTHISHYAN VOICE";
+      if (this.playVoiceBtn) this.playVoiceBtn.textContent = "🔊 PLAY MALAYALAM VOICE";
     }
   }
 
@@ -87,7 +88,7 @@ class ResultController {
       window.audioController.stopAudio();
       this.isPlaying = false;
       if (this.waveformEl) this.waveformEl.style.display = "none";
-      if (this.playVoiceBtn) this.playVoiceBtn.textContent = "🔊 PLAY JOTHISHYAN VOICE";
+      if (this.playVoiceBtn) this.playVoiceBtn.textContent = "🔊 PLAY MALAYALAM VOICE";
     } else {
       window.audioController.unlockAudio();
       if ('speechSynthesis' in window) {

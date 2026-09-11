@@ -110,8 +110,17 @@ class AudioController {
     this.unlocked = false;
     this.voices = [];
     this.serverTTSCooldownUntil = 0;
+    this.currentVoice = "Fenrir";
 
     this.initVoices();
+  }
+
+  setVoice(_voice) {
+    this.currentVoice = "Fenrir";
+  }
+
+  getVoice() {
+    return "Fenrir";
   }
 
   initVoices() {
@@ -344,27 +353,20 @@ class AudioController {
 
   /**
    * Plays the final AI Jothishyan voice reading or user chat response.
-   * Plays the authentic recorded Malayalam cue first, then speaks the reading text.
+   * Directly prioritizes the authentic Malayalam AI model sound.
    */
-  async playResultAudio(audioUrl, fallbackText = "") {
+  async playResultAudio(audioUrl, fallbackText = "", voice = null) {
     if (this.isMuted) return;
     this.stopAudio();
     this.initContext();
 
+    const selectedVoice = "Fenrir";
+
     if (this.onPlayStateChange) {
-      this.onPlayStateChange(true, "Jothishyan is reading...");
+      this.onPlayStateChange(true, "🔊 Malayalam Astrologer Voice speaking...");
     }
 
-    // 1. ALWAYS play the authentic recorded Malayalam announcement cue first:
-    // "Aha! Karyangalokke manassilayi..." (completed.mp3)
-    // Guarantees immediate, audible spoken Malayalam feedback across all browsers.
-    try {
-      await this.playScannerAudio('completed', true);
-    } catch (e) {
-      console.warn("Announcement audio error:", e);
-    }
-
-    // 2. If a real voice audio URL is provided directly (base64 WAV data URL from Gemini TTS)
+    // 1. Direct Malayalam AI Model Sound (Base64 WAV)
     if (audioUrl && audioUrl.startsWith("data:audio/")) {
       try {
         const played = await this.playAudioUrl(audioUrl);
@@ -373,11 +375,11 @@ class AudioController {
           return true;
         }
       } catch (err) {
-        console.warn("Direct voice data playback failed:", err);
+        console.warn("Direct Malayalam AI voice playback failed:", err);
       }
     }
 
-    // 3. If audioUrl is missing or just a chime, check /api/tts (if not in quota cooldown)
+    // 2. Fetch fresh Malayalam AI Model Sound from /api/tts
     if (fallbackText) {
       const now = Date.now();
       if (!this.serverTTSCooldownUntil || now > this.serverTTSCooldownUntil) {
@@ -385,12 +387,13 @@ class AudioController {
           const ttsRes = await fetch("/api/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: fallbackText })
+            body: JSON.stringify({ text: fallbackText, voice: selectedVoice })
           });
           if (ttsRes.ok) {
             const ttsData = await ttsRes.json();
             if (ttsData.tts_available === false) {
-              this.serverTTSCooldownUntil = Date.now() + 10 * 60 * 1000;
+              // Temporary 25s pause for rate limits
+              this.serverTTSCooldownUntil = Date.now() + 25 * 1000;
             } else if (ttsData.audio_url && ttsData.audio_url.startsWith("data:audio/")) {
               const played = await this.playAudioUrl(ttsData.audio_url);
               if (played) {
@@ -400,26 +403,40 @@ class AudioController {
             }
           }
         } catch (e) {
-          this.serverTTSCooldownUntil = Date.now() + 60 * 1000;
+          this.serverTTSCooldownUntil = Date.now() + 25 * 1000;
         }
       }
+    }
 
-      // 4. Bulletproof browser SpeechSynthesis with natural Manglish phonetics
-      await this.speakFallbackSpeech(fallbackText);
+    // 3. Fallback: Authentically recorded Kerala Astrologer Voice with deep resonance
+    // CRITICAL: NEVER play plain English / robotic device SpeechSynthesis!
+    // The user explicitly rejected plain/robot voices without Kerala slang or astrologer tone.
+    try {
+      if (this.onPlayStateChange) {
+        this.onPlayStateChange(true, "🔊 Authentic Kerala Astrologer: Aha! Karyangalokke manassilayi...");
+      }
+      await this.playScannerAudio('completed', true);
+
+      // Only attempt browser speech if the OS actually has a native Malayalam voice installed
+      if (fallbackText) {
+        await this.speakFallbackSpeech(fallbackText);
+      }
+    } catch (e) {
+      console.warn("Fallback Kerala astrologer audio error:", e);
     }
 
     if (this.onPlayStateChange) this.onPlayStateChange(false);
   }
 
   /**
-   * Plays a data: audio URL using HTML5 Audio or Web Audio Context.
+   * Plays a data: audio URL using HTML5 Audio or Web Audio Context with deep resonance.
    */
   playAudioUrl(url) {
     return new Promise(async (resolve, reject) => {
       this.stopAudio();
       this.initContext();
 
-      // Attempt 1: Web Audio Context Buffer decoding (most reliable in sandboxed iframes)
+      // Attempt 1: Web Audio Context Buffer decoding with Deep Astrologer resonance
       if (this.audioContext) {
         try {
           if (this.audioContext.state === 'suspended') {
@@ -431,9 +448,25 @@ class AudioController {
 
           const source = this.audioContext.createBufferSource();
           source.buffer = audioBuffer;
+          source.playbackRate.value = 0.94; // slightly deliberate Kerala astrologer cadence
+
+          // Deep Astrologer chest resonance (Fenrir tone booster)
+          const bassBoost = this.audioContext.createBiquadFilter();
+          bassBoost.type = "lowshelf";
+          bassBoost.frequency.value = 240;
+          bassBoost.gain.value = 5.5;
+
+          const midWarmth = this.audioContext.createBiquadFilter();
+          midWarmth.type = "peaking";
+          midWarmth.frequency.value = 600;
+          midWarmth.gain.value = 2.0;
+
           const gainNode = this.audioContext.createGain();
           gainNode.gain.value = 1.0;
-          source.connect(gainNode);
+
+          source.connect(bassBoost);
+          bassBoost.connect(midWarmth);
+          midWarmth.connect(gainNode);
           gainNode.connect(this.audioContext.destination);
 
           this.currentSourceNode = source;
@@ -479,8 +512,8 @@ class AudioController {
   }
 
   /**
-   * Uses browser SpeechSynthesis with Malayalam / Indian accent preference,
-   * with automatic phonetic transliteration for English/Indian voices.
+   * Only uses browser SpeechSynthesis IF an authentic Malayalam voice is installed.
+   * NEVER speaks in a plain robotic English voice.
    */
   speakFallbackSpeech(text) {
     return new Promise((resolve) => {
@@ -500,36 +533,28 @@ class AudioController {
           window.speechSynthesis.resume();
         }
 
+        const voices = this.voices.length > 0 ? this.voices : (window.speechSynthesis.getVoices() || []);
+
+        // Find strictly authentic native Malayalam voice
+        const mlVoice = voices.find(v => v.lang && (v.lang.startsWith('ml') || v.lang.toLowerCase().includes('malayalam')));
+
+        // If the client system does NOT have an authentic Malayalam voice, DO NOT use plain robotic English TTS
+        if (!mlVoice) {
+          console.log("[AudioController] No native Malayalam voice installed on client OS; skipping generic robot English TTS to preserve Kerala astrologer authenticity.");
+          resolve(false);
+          return;
+        }
+
         // Small delay to prevent Chrome cancel bug
         setTimeout(() => {
           try {
-            const voices = this.voices.length > 0 ? this.voices : (window.speechSynthesis.getVoices() || []);
-
-            // Find optimal voice
-            const mlVoice = voices.find(v => v.lang && (v.lang.startsWith('ml') || v.lang.toLowerCase().includes('malayalam')));
-            const inVoice = voices.find(v => v.lang && (v.lang === 'en-IN' || v.lang.startsWith('hi') || v.lang.toLowerCase().includes('india')));
-            const enVoice = voices.find(v => v.lang && v.lang.startsWith('en'));
-
-            const chosenVoice = mlVoice || inVoice || enVoice || voices[0] || null;
-
-            let spokenText = text;
-            if (!mlVoice) {
-              spokenText = transliterateMalayalamToManglish(text);
-              if (!spokenText) spokenText = text;
-            }
-
-            const utterance = new SpeechSynthesisUtterance(spokenText);
-            this.currentUtterance = utterance; // Keep reference against Chrome GC
-            utterance.rate = 0.92;
-            utterance.pitch = 1.0;
+            const utterance = new SpeechSynthesisUtterance(text);
+            this.currentUtterance = utterance;
+            utterance.voice = mlVoice;
+            utterance.lang = mlVoice.lang || 'ml-IN';
+            utterance.rate = 0.85; // deliberate, authentic tempo
+            utterance.pitch = 0.72; // deep astrologer pitch
             utterance.volume = 1.0;
-
-            if (chosenVoice) {
-              utterance.voice = chosenVoice;
-              utterance.lang = chosenVoice.lang || 'en-IN';
-            } else {
-              utterance.lang = 'en-IN';
-            }
 
             let resolved = false;
             const finish = (ok) => {
@@ -550,13 +575,12 @@ class AudioController {
             }
             window.speechSynthesis.speak(utterance);
 
-            // Safety timeout in case utterance doesn't fire onend
-            setTimeout(() => finish(true), Math.min(25000, Math.max(4000, spokenText.length * 90)));
+            setTimeout(() => finish(true), Math.min(25000, Math.max(4000, text.length * 90)));
           } catch (e) {
             resolve(false);
           }
         }, 50);
-      } catch (err) {
+      } catch (e) {
         resolve(false);
       }
     });

@@ -75,10 +75,12 @@ class ChatController {
 
     try {
       const palmContext = (window.app && window.app.currentPalmData) ? window.app.currentPalmData.features : {};
+      const activeVoice = "Fenrir";
       const res = await window.apiClient.sendChatMessage({
         message: text,
         palm_context: palmContext,
-        chat_history: this.chatHistory
+        chat_history: this.chatHistory,
+        voice: "Fenrir"
       });
 
       this.removeTypingIndicator(typingIndicatorId);
@@ -87,13 +89,14 @@ class ChatController {
       this.appendMessage({
         role: "jothishyan",
         text: replyText,
-        audio_url: res.audio_url
+        audio_url: res.audio_url,
+        voice: "Fenrir"
       });
 
       this.chatHistory.push({ role: "jothishyan", text: replyText });
 
-      // Automatically play response voice
-      window.audioController.playResultAudio(res.audio_url, replyText);
+      // Automatically play response Malayalam AI voice (Fenrir Deep Astrologer)
+      window.audioController.playResultAudio(res.audio_url, replyText, "Fenrir");
     } catch (err) {
       this.removeTypingIndicator(typingIndicatorId);
       this.appendMessage({
@@ -124,13 +127,13 @@ class ChatController {
       audioBtn.className = "btn btn-secondary btn-sm message-audio-btn";
       audioBtn.style.fontSize = "11px";
       audioBtn.style.padding = "4px 8px";
-      audioBtn.innerHTML = "▶ PLAY JOTHISHYAN";
+      audioBtn.innerHTML = "▶ 🔊 PLAY MALAYALAM VOICE";
       audioBtn.onclick = () => {
         window.audioController.unlockAudio();
         if ('speechSynthesis' in window) {
           window.speechSynthesis.resume();
         }
-        window.audioController.playResultAudio(msg.audio_url, msg.text);
+        window.audioController.playResultAudio(msg.audio_url, msg.text, "Fenrir");
       };
       msgEl.appendChild(audioBtn);
     }
